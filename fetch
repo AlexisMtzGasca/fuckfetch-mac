@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Creado por Alexis :) https://github.com/AlexisMtzGasca
+title() {
+    title="${USER:-$(whoami)}@${HOSTNAME:-$(hostname)}"
+}
+
+distro() {
+    distro="$(sw_vers -productName) $(sw_vers -productVersion)"
+}
+
+kernel() {
+    kernel="$(uname -sr)"
+}
+
+shell() {
+    shell="${SHELL##*/}"
+}
+
+pkg() {
+    pkz="$(brew list | wc -l)"
+	pkg="$(echo $pkz | sed -e 's/^[[:space:]]*//')"
+}
+
+
+uptime() {
+    boot=$(sysctl -n kern.boottime)
+    boot=${boot/\{ sec = }
+    boot=${boot/,*}
+    now=$(date +%s)
+    s=$((now - boot))
+
+    ((d=s/60/60/24, h=s/60/60%24, m=s/60%60))
+
+    ((d)) && uptime+="${d}d "
+    ((h)) && uptime+="${h}h "
+    ((m)) && uptime+="${m}m "
+}
+
+memory() {
+    mem_total="$(($(sysctl -n hw.memsize) / 1024 / 1024))"
+    mem_wired="$(vm_stat | awk '/ wired/ { print $4 }')"
+    mem_active="$(vm_stat | awk '/ active/ { printf $3 }')"
+    mem_compressed="$(vm_stat | awk '/ occupied/ { printf $5 }')"
+    mem_compressed="${mem_compressed:-0}"
+    mem_used="$(((${mem_wired//.} + ${mem_active//.} + ${mem_compressed//.}) * 4 / 1024))"
+    memory="${mem_used}M/${mem_total}M"
+}
+
+model() {
+    model=$(system_profiler SPHardwareDataType | awk '/Model\ Identifier/ {print $3}')
+}
+
+proc() {
+    proc=$(sysctl -n machdep.cpu.brand_string)
+}
+
+{
+title
+distro
+shell
+model
+uptime
+memory
+kernel
+pkg
+proc
+} 2>/dev/null
+
+echo -e "\u001b[31m\033[1m\033[0m\u001b[0m  $distro
+\u001b[37m\033[1m\033[0m\u001b[0m  $shell
+\u001b[35m\033[1m\033[0m\u001b[0m  $model
+\u001b[34m\033[1m惘\033[0m\u001b[0m $pkg pkgs
+\u001b[36m\033[1m\033[0m\u001b[0m  $uptime
+\u001b[32m\033[1m\033[0m\u001b[0m  $memory
+\u001b[33m\033[1m閭\033[0m\u001b[0m $proc
+\u001b[38m\033[1m\033[0m\u001b[0m  $kernel"
